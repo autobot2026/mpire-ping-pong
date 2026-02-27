@@ -19,6 +19,8 @@ const AI_Z      = -TABLE_D / 2 + 0.5;
 type Difficulty = "easy" | "medium" | "hard" | "very_hard";
 type Phase      = "start" | "difficulty" | "playing" | "between" | "won";
 
+const BALL_LAUNCH_SPEED = 3.5; // always starts slow regardless of difficulty
+
 const DIFF: Record<Difficulty, { lerp: number; speedInit: number; speedMax: number }> = {
   easy:      { lerp: 0.018, speedInit: 6,  speedMax: 12 },
   medium:    { lerp: 0.038, speedInit: 8,  speedMax: 18 },
@@ -267,13 +269,14 @@ function Paddle({ x, z, color }: { x: number; z: number; color: string }) {
 }
 
 // ─── Game Scene ──────────────────────────────────────────────
-function GameScene({ phase, difficulty, onScore, ndcRef, ballRef, velRef, playerXRef, aiXRef }: {
+function GameScene({ phase, difficulty, onScore, ndcRef, ballRef, velRef, playerXRef, aiXRef, firstHitRef }: {
   phase: Phase; difficulty: Difficulty; onScore: (s: "player" | "ai") => void;
   ndcRef: React.MutableRefObject<{ x: number; y: number }>;
   ballRef: React.MutableRefObject<THREE.Vector3>;
   velRef:  React.MutableRefObject<THREE.Vector3>;
-  playerXRef: React.MutableRefObject<number>;
-  aiXRef:     React.MutableRefObject<number>;
+  playerXRef:  React.MutableRefObject<number>;
+  aiXRef:      React.MutableRefObject<number>;
+  firstHitRef: React.MutableRefObject<boolean>;
 }) {
   useThree(); // keep hook for potential future use
   const [ballPos, setBallPos] = useState(() => ballRef.current.clone());
@@ -318,7 +321,14 @@ function GameScene({ phase, difficulty, onScore, ndcRef, ballRef, velRef, player
       && Math.abs(pos.x - playerXRef.current) < PADDLE_W / 2 + BALL_R) {
       vel.z = -Math.abs(vel.z);
       vel.x += ((pos.x - playerXRef.current) / (PADDLE_W / 2)) * 3;
-      if (vel.length() < speedMax) vel.multiplyScalar(1.05);
+      // First hit: snap to full game speed
+      if (!firstHitRef.current) {
+        firstHitRef.current = true;
+        const dir = vel.clone().normalize();
+        vel.copy(dir.multiplyScalar(DIFF[difficulty].speedInit));
+      } else if (vel.length() < speedMax) {
+        vel.multiplyScalar(1.05);
+      }
       pos.z = PLAYER_Z - PADDLE_D / 2 - BALL_R;
       beep(640, 0.09);
     }
@@ -330,7 +340,13 @@ function GameScene({ phase, difficulty, onScore, ndcRef, ballRef, velRef, player
       && Math.abs(pos.x - aiXRef.current) < PADDLE_W / 2 + BALL_R) {
       vel.z = Math.abs(vel.z);
       vel.x += ((pos.x - aiXRef.current) / (PADDLE_W / 2)) * 2;
-      if (vel.length() < speedMax) vel.multiplyScalar(1.03);
+      if (!firstHitRef.current) {
+        firstHitRef.current = true;
+        const dir = vel.clone().normalize();
+        vel.copy(dir.multiplyScalar(DIFF[difficulty].speedInit));
+      } else if (vel.length() < speedMax) {
+        vel.multiplyScalar(1.03);
+      }
       pos.z = AI_Z + PADDLE_D / 2 + BALL_R;
       beep(520, 0.09);
     }
@@ -357,14 +373,20 @@ function GameScene({ phase, difficulty, onScore, ndcRef, ballRef, velRef, player
 
 // ─── Helpers ─────────────────────────────────────────────────
 function doReset(
-  ballRef: React.MutableRefObject<THREE.Vector3>,
-  velRef:  React.MutableRefObject<THREE.Vector3>,
+  ballRef:       React.MutableRefObject<THREE.Vector3>,
+  velRef:        React.MutableRefObject<THREE.Vector3>,
+  firstHitRef:   React.MutableRefObject<boolean>,
   diff: Difficulty, towardPlayer: boolean
 ) {
-  const { speedInit } = DIFF[diff];
   const a = (Math.random() - 0.5) * 0.5;
   ballRef.current.set(0, TABLE_H / 2 + BALL_R + 0.01, 0);
-  velRef.current.set(Math.sin(a) * speedInit, 0, (towardPlayer ? 1 : -1) * Math.cos(a) * speedInit);
+  // Always launch slow — ramps to full speed on first paddle hit
+  velRef.current.set(
+    Math.sin(a) * BALL_LAUNCH_SPEED,
+    0,
+    (towardPlayer ? 1 : -1) * Math.cos(a) * BALL_LAUNCH_SPEED
+  );
+  firstHitRef.current = false; // reset flag
 }
 
 // ─── Root ────────────────────────────────────────────────────
@@ -374,17 +396,18 @@ export default function Game() {
   const [scores,     setScores]     = useState({ player: 0, ai: 0 });
   const [winner,     setWinner]     = useState<"Player" | "AI" | null>(null);
 
-  const ndcRef     = useRef({ x: 0, y: 0 });
-  const ballRef    = useRef(new THREE.Vector3(0, TABLE_H / 2 + BALL_R + 0.01, 0));
-  const velRef     = useRef(new THREE.Vector3(0, 0, DIFF.medium.speedInit));
-  const playerXRef = useRef(0);
-  const aiXRef     = useRef(0);
+  const ndcRef      = useRef({ x: 0, y: 0 });
+  const ballRef     = useRef(new THREE.Vector3(0, TABLE_H / 2 + BALL_R + 0.01, 0));
+  const velRef      = useRef(new THREE.Vector3(0, 0, BALL_LAUNCH_SPEED));
+  const playerXRef  = useRef(0);
+  const aiXRef      = useRef(0);
+  const firstHitRef = useRef(false);
 
   const startGame = useCallback((diff: Difficulty) => {
     setScores({ player: 0, ai: 0 });
     setWinner(null);
     setDifficulty(diff);
-    doReset(ballRef, velRef, diff, true);
+    doReset(ballRef, velRef, firstHitRef, diff, true);
     setPhase("playing");
   }, []);
 
@@ -399,7 +422,7 @@ export default function Game() {
       else {
         setPhase("between");
         setTimeout(() => {
-          doReset(ballRef, velRef, difficulty, scorer === "ai");
+          doReset(ballRef, velRef, firstHitRef, difficulty, scorer === "ai");
           setPhase("playing");
         }, 1200);
       }
@@ -409,8 +432,25 @@ export default function Game() {
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    ndcRef.current.x =  ((e.clientX - r.left) / r.width)  * 2 - 1;
-    ndcRef.current.y = -((e.clientY - r.top)  / r.height) * 2 + 1;
+    ndcRef.current.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    ndcRef.current.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }, []);
+
+  // Touch: use first touch point, map X directly — no preventDefault needed on passive
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    ndcRef.current.x = ((touch.clientX - r.left) / r.width) * 2 - 1;
+    ndcRef.current.y = -((touch.clientY - r.top) / r.height) * 2 + 1;
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    ndcRef.current.x = ((touch.clientX - r.left) / r.width) * 2 - 1;
+    ndcRef.current.y = -((touch.clientY - r.top) / r.height) * 2 + 1;
   }, []);
 
   const ov = (extra?: React.CSSProperties): React.CSSProperties => ({
@@ -437,8 +477,10 @@ export default function Game() {
 
   return (
     <div
-      style={{ width: "100vw", height: "100vh", position: "relative", background: "#050510", cursor: "none" }}
+      style={{ width: "100vw", height: "100vh", position: "relative", background: "#050510", cursor: "none", touchAction: "none" }}
       onMouseMove={handleMouseMove}
+      onTouchMove={handleTouchMove}
+      onTouchStart={handleTouchStart}
     >
       {/* HUD */}
       <div style={{ position:"absolute", top:20, left:0, right:0, display:"flex", justifyContent:"center", gap:48, zIndex:10, pointerEvents:"none" }}>
@@ -459,12 +501,13 @@ export default function Game() {
           phase={phase} difficulty={difficulty} onScore={handleScore}
           ndcRef={ndcRef} ballRef={ballRef} velRef={velRef}
           playerXRef={playerXRef} aiXRef={aiXRef}
+          firstHitRef={firstHitRef}
         />
       </Canvas>
 
       {/* Start */}
       {phase === "start" && (
-        <div style={ov()} onClick={() => setPhase("difficulty")}>
+        <div style={ov()} onClick={() => setPhase("difficulty")} onTouchEnd={() => setPhase("difficulty")}>
           <div style={{ color:"#00e5ff", fontSize:46, textShadow:"0 0 28px #00e5ff", letterSpacing:6 }}>MPIRE PING PONG</div>
           <div style={{ marginTop:12, color:"#666", fontSize:15 }}>Move your mouse to control the <span style={{ color:"#00e5ff" }}>cyan</span> hand</div>
           <div style={{ marginTop:6, color:"#555", fontSize:13 }}>First to {WIN_SCORE} wins</div>
