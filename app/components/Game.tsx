@@ -419,7 +419,7 @@ export default function Game() {
         ai:     scorer === "ai"     ? prev.ai + 1     : prev.ai,
       };
       if (next.player >= WIN_SCORE)      { setWinner("Player"); setPhase("won"); }
-      else if (next.ai >= WIN_SCORE)     { setWinner("AI");     setPhase("won"); }
+      else if (next.ai >= WIN_SCORE)     { setWinner("Auto");     setPhase("won"); }
       else {
         setPhase("between");
         setTimeout(() => {
@@ -474,8 +474,8 @@ export default function Game() {
   const diffMeta = {
     easy:      { label: "EASY",      sub: "Fair · Good starting point",         col: "#00ff88" },
     medium:    { label: "MEDIUM",    sub: "Challenging · Bring focus",           col: "#00e5ff" },
-    hard:      { label: "HARD",      sub: "Fast AI · Reflexes required",         col: "#ffaa00" },
-    very_hard: { label: "VERY HARD", sub: "Near-perfect AI · Nearly impossible", col: "#ff4444" },
+    hard:      { label: "HARD",      sub: "Fast Auto · Reflexes required",         col: "#ffaa00" },
+    very_hard: { label: "VERY HARD", sub: "Near-perfect Auto · Nearly impossible", col: "#ff4444" },
   } as const;
 
   return (
@@ -507,7 +507,7 @@ export default function Game() {
       <div style={{ position:"absolute", top:52, left:0, right:0, display:"flex", justifyContent:"center", alignItems:"center", gap:36, zIndex:10, pointerEvents:"none" }}>
         <span style={{ fontFamily:"monospace", color:"#00e5ff", fontSize:22, textShadow:"0 0 10px #00e5ff" }}>YOU: {scores.player}</span>
         <span style={{ fontFamily:"monospace", color:"#444", fontSize:16 }}>vs</span>
-        <span style={{ fontFamily:"monospace", color:"#ff4444", fontSize:22, textShadow:"0 0 10px #ff4444" }}>AI: {scores.ai}</span>
+        <span style={{ fontFamily:"monospace", color:"#ff4444", fontSize:22, textShadow:"0 0 10px #ff4444" }}>AUTO: {scores.ai}</span>
       </div>
       <div style={{ position:"absolute", top:84, left:0, right:0, textAlign:"center", fontFamily:"monospace", color:"#00e5ff", fontSize:10, letterSpacing:6, opacity:0.3, pointerEvents:"none", zIndex:10 }}>
         MPIRE PING PONG
@@ -545,7 +545,7 @@ export default function Game() {
           <div style={{ display:"flex", flexDirection:"column", gap:18, maxWidth:480, textAlign:"left" }}>
             {[
               { icon:"🖱️", title:"Controls", body:"Move your mouse (or slide your finger on mobile) left and right to move the cyan paddle." },
-              { icon:"🏓", title:"Objective", body:`Rally the ball past the AI's paddle. First player to score ${WIN_SCORE} points wins the match.` },
+              { icon:"🏓", title:"Objective", body:`Rally the ball past Auto's paddle. First player to score ${WIN_SCORE} points wins the match.` },
               { icon:"⚡", title:"Speed Up", body:"Every time a paddle makes contact the ball speeds up slightly. React faster as the rally goes on." },
               { icon:"📐", title:"Angles", body:"Hit the ball off-center to change its angle. The further from center you hit, the sharper the deflection." },
               { icon:"🚀", title:"Serve", body:"Each point starts with a slow serve — gives you time to get in position before the real rally begins." },
@@ -570,7 +570,7 @@ export default function Game() {
       {phase === "difficulty" && (
         <div style={ov()}>
           <div style={{ color:"#fff", fontSize:28, letterSpacing:4, marginBottom:8 }}>SELECT DIFFICULTY</div>
-          <div style={{ color:"#555", fontSize:13, marginBottom:44 }}>How hard do you want the AI?</div>
+          <div style={{ color:"#555", fontSize:13, marginBottom:44 }}>How hard do you want Auto?</div>
           <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
             {(["easy","medium","hard","very_hard"] as Difficulty[]).map(d => {
               const m = diffMeta[d];
@@ -601,7 +601,7 @@ export default function Game() {
       {phase === "won" && winner && (
         <div style={ov()}>
           <div style={{ fontSize:54, color: winner==="Player" ? "#00e5ff" : "#ff4444", textShadow:`0 0 32px ${winner==="Player"?"#00e5ff":"#ff4444"}`, letterSpacing:4 }}>
-            {winner === "Player" ? "YOU WIN!" : "AI WINS!"}
+            {winner === "Player" ? "YOU WIN!" : "AUTO WINS!"}
           </div>
           <div style={{ marginTop:14, color:"#666", fontSize:22, fontFamily:"monospace" }}>{scores.player} — {scores.ai}</div>
           <div style={{ display:"flex", gap:20, marginTop:52 }}>
