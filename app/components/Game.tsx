@@ -466,7 +466,9 @@ export default function Game() {
     padding: "16px 56px", border: `2px solid ${col}`, borderRadius: 6,
     color: col, fontSize: 18, fontWeight: 700, cursor: "pointer",
     letterSpacing: 2, textShadow: `0 0 10px ${col}`,
-    boxShadow: `0 0 28px ${col}44`, background: "transparent", ...extra,
+    boxShadow: `0 0 28px ${col}44`, background: "transparent",
+    textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center",
+    ...extra,
   });
 
   const diffMeta = {
@@ -483,27 +485,16 @@ export default function Game() {
       onTouchMove={handleTouchMove}
       onTouchStart={handleTouchStart}
     >
-      {/* HUD */}
-      <div style={{ position:"absolute", top:20, left:0, right:0, display:"flex", justifyContent:"center", gap:48, zIndex:10, pointerEvents:"none" }}>
-        <span style={{ fontFamily:"monospace", color:"#00e5ff", fontSize:32, textShadow:"0 0 12px #00e5ff" }}>YOU: {scores.player}</span>
-        <span style={{ fontFamily:"monospace", color:"#444", fontSize:22, alignSelf:"center" }}>vs</span>
-        <span style={{ fontFamily:"monospace", color:"#ff4444", fontSize:32, textShadow:"0 0 12px #ff4444" }}>AI: {scores.ai}</span>
-      </div>
-      <div style={{ position:"absolute", top:66, left:0, right:0, textAlign:"center", fontFamily:"monospace", color:"#00e5ff", fontSize:11, letterSpacing:6, opacity:0.35, pointerEvents:"none", zIndex:10 }}>
-        MPIRE PING PONG
-      </div>
-
-      {/* In-game menu button */}
+      {/* In-game menu button — top right */}
       {(phase === "playing" || phase === "between") && (
         <div
           onClick={() => setPhase("start")}
           style={{
-            position:"absolute", top:18, right:20, zIndex:20,
-            fontFamily:"monospace", fontSize:12, letterSpacing:2,
+            position:"absolute", top:16, right:20, zIndex:20,
+            fontFamily:"monospace", fontSize:11, letterSpacing:2,
             color:"rgba(255,255,255,0.3)", cursor:"pointer",
             border:"1px solid rgba(255,255,255,0.12)",
             padding:"6px 14px", borderRadius:4,
-            transition:"all 0.2s",
           }}
           onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
           onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
@@ -511,6 +502,16 @@ export default function Game() {
           ← MENU
         </div>
       )}
+
+      {/* HUD — score moved down, smaller text */}
+      <div style={{ position:"absolute", top:52, left:0, right:0, display:"flex", justifyContent:"center", alignItems:"center", gap:36, zIndex:10, pointerEvents:"none" }}>
+        <span style={{ fontFamily:"monospace", color:"#00e5ff", fontSize:22, textShadow:"0 0 10px #00e5ff" }}>YOU: {scores.player}</span>
+        <span style={{ fontFamily:"monospace", color:"#444", fontSize:16 }}>vs</span>
+        <span style={{ fontFamily:"monospace", color:"#ff4444", fontSize:22, textShadow:"0 0 10px #ff4444" }}>AI: {scores.ai}</span>
+      </div>
+      <div style={{ position:"absolute", top:84, left:0, right:0, textAlign:"center", fontFamily:"monospace", color:"#00e5ff", fontSize:10, letterSpacing:6, opacity:0.3, pointerEvents:"none", zIndex:10 }}>
+        MPIRE PING PONG
+      </div>
 
       {/* 3D Canvas */}
       <Canvas camera={{ position: [0, 8, 12], fov: 50 }} shadows style={{ width:"100%", height:"100%" }}>
