@@ -395,7 +395,7 @@ export default function Game() {
   const [phase,      setPhase]      = useState<Phase>("start");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [scores,     setScores]     = useState({ player: 0, ai: 0 });
-  const [winner,     setWinner]     = useState<"Player" | "AI" | null>(null);
+  const [winner,     setWinner]     = useState<"Player" | "Auto" | null>(null);
 
   const ndcRef      = useRef({ x: 0, y: 0 });
   const ballRef     = useRef(new THREE.Vector3(0, TABLE_H / 2 + BALL_R + 0.01, 0));
