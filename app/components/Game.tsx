@@ -17,15 +17,16 @@ const PLAYER_Z  = TABLE_D / 2 - 0.5;
 const AI_Z      = -TABLE_D / 2 + 0.5;
 
 type Difficulty = "easy" | "medium" | "hard" | "very_hard";
-type Phase      = "start" | "difficulty" | "playing" | "between" | "won";
+type Phase      = "start" | "rules" | "difficulty" | "playing" | "between" | "won";
 
-const BALL_LAUNCH_SPEED = 3.5; // always starts slow regardless of difficulty
+const BALL_LAUNCH_SPEED = 3.5;
 
+// Difficulty shifted up — easy = old medium, very_hard = near-impossible
 const DIFF: Record<Difficulty, { lerp: number; speedInit: number; speedMax: number }> = {
-  easy:      { lerp: 0.018, speedInit: 6,  speedMax: 12 },
-  medium:    { lerp: 0.038, speedInit: 8,  speedMax: 18 },
-  hard:      { lerp: 0.075, speedInit: 10, speedMax: 24 },
-  very_hard: { lerp: 0.14,  speedInit: 13, speedMax: 30 },
+  easy:      { lerp: 0.038, speedInit: 8,  speedMax: 18 },
+  medium:    { lerp: 0.075, speedInit: 10, speedMax: 24 },
+  hard:      { lerp: 0.14,  speedInit: 13, speedMax: 30 },
+  very_hard: { lerp: 0.55,  speedInit: 16, speedMax: 38 }, // near-perfect AI
 };
 
 function beep(freq = 440, dur = 0.08) {
@@ -469,10 +470,10 @@ export default function Game() {
   });
 
   const diffMeta = {
-    easy:      { label: "EASY",      sub: "Slow AI · Chill vibes",           col: "#00ff88" },
-    medium:    { label: "MEDIUM",    sub: "Balanced · Fair fight",            col: "#00e5ff" },
-    hard:      { label: "HARD",      sub: "Fast AI · Bring your A-game",      col: "#ffaa00" },
-    very_hard: { label: "VERY HARD", sub: "Maximum AI · God mode challenge",  col: "#ff4444" },
+    easy:      { label: "EASY",      sub: "Fair · Good starting point",         col: "#00ff88" },
+    medium:    { label: "MEDIUM",    sub: "Challenging · Bring focus",           col: "#00e5ff" },
+    hard:      { label: "HARD",      sub: "Fast AI · Reflexes required",         col: "#ffaa00" },
+    very_hard: { label: "VERY HARD", sub: "Near-perfect AI · Nearly impossible", col: "#ff4444" },
   } as const;
 
   return (
@@ -492,6 +493,25 @@ export default function Game() {
         MPIRE PING PONG
       </div>
 
+      {/* In-game menu button */}
+      {(phase === "playing" || phase === "between") && (
+        <div
+          onClick={() => setPhase("start")}
+          style={{
+            position:"absolute", top:18, right:20, zIndex:20,
+            fontFamily:"monospace", fontSize:12, letterSpacing:2,
+            color:"rgba(255,255,255,0.3)", cursor:"pointer",
+            border:"1px solid rgba(255,255,255,0.12)",
+            padding:"6px 14px", borderRadius:4,
+            transition:"all 0.2s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
+          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+        >
+          ← MENU
+        </div>
+      )}
+
       {/* 3D Canvas */}
       <Canvas camera={{ position: [0, 8, 12], fov: 50 }} shadows style={{ width:"100%", height:"100%" }}>
         <ambientLight intensity={0.45} />
@@ -507,11 +527,41 @@ export default function Game() {
 
       {/* Start */}
       {phase === "start" && (
-        <div style={ov()} onClick={() => setPhase("difficulty")} onTouchEnd={() => setPhase("difficulty")}>
-          <div style={{ color:"#00e5ff", fontSize:46, textShadow:"0 0 28px #00e5ff", letterSpacing:6 }}>MPIRE PING PONG</div>
-          <div style={{ marginTop:12, color:"#666", fontSize:15 }}>Move your mouse to control the <span style={{ color:"#00e5ff" }}>cyan</span> hand</div>
-          <div style={{ marginTop:6, color:"#555", fontSize:13 }}>First to {WIN_SCORE} wins</div>
-          <div style={{ ...btn(), marginTop:48 }}>CLICK TO START</div>
+        <div style={ov()}>
+          <div style={{ color:"#00e5ff", fontSize:46, textShadow:"0 0 28px #00e5ff", letterSpacing:6, textAlign:"center" }}>MPIRE PING PONG</div>
+          <div style={{ marginTop:10, color:"#555", fontSize:13, letterSpacing:2 }}>First to {WIN_SCORE} wins</div>
+          <div style={{ display:"flex", gap:16, marginTop:48 }}>
+            <div onClick={() => setPhase("rules")} onTouchEnd={() => setPhase("rules")} style={btn("#888")}>HOW TO PLAY</div>
+            <div onClick={() => setPhase("difficulty")} onTouchEnd={() => setPhase("difficulty")} style={btn()}>PLAY</div>
+          </div>
+        </div>
+      )}
+
+      {/* Rules */}
+      {phase === "rules" && (
+        <div style={ov()}>
+          <div style={{ color:"#00e5ff", fontSize:28, letterSpacing:4, marginBottom:32 }}>HOW TO PLAY</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:18, maxWidth:480, textAlign:"left" }}>
+            {[
+              { icon:"🖱️", title:"Controls", body:"Move your mouse (or slide your finger on mobile) left and right to move the cyan paddle." },
+              { icon:"🏓", title:"Objective", body:`Rally the ball past the AI's paddle. First player to score ${WIN_SCORE} points wins the match.` },
+              { icon:"⚡", title:"Speed Up", body:"Every time a paddle makes contact the ball speeds up slightly. React faster as the rally goes on." },
+              { icon:"📐", title:"Angles", body:"Hit the ball off-center to change its angle. The further from center you hit, the sharper the deflection." },
+              { icon:"🚀", title:"Serve", body:"Each point starts with a slow serve — gives you time to get in position before the real rally begins." },
+            ].map(r => (
+              <div key={r.title} style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
+                <span style={{ fontSize:22, flexShrink:0 }}>{r.icon}</span>
+                <div>
+                  <div style={{ color:"#fff", fontSize:14, fontWeight:700, marginBottom:3, letterSpacing:1 }}>{r.title}</div>
+                  <div style={{ color:"#777", fontSize:13, lineHeight:1.6 }}>{r.body}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:16, marginTop:44 }}>
+            <div onClick={() => setPhase("start")} style={btn("#555")}>← BACK</div>
+            <div onClick={() => setPhase("difficulty")} style={btn()}>SELECT DIFFICULTY</div>
+          </div>
         </div>
       )}
 
@@ -535,6 +585,7 @@ export default function Game() {
               );
             })}
           </div>
+          <div onClick={() => setPhase("start")} style={{ ...btn("#555"), marginTop:28 }}>← BACK</div>
         </div>
       )}
 
